@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+use ZMQ::FFI qw(ZMQ_SUB);
+use Time::HiRes q(usleep);
+use Data::Dumper;
+
+my $ctx = ZMQ::FFI->new();
+my $s = $ctx->socket(ZMQ_SUB);
+
+$s->connect($ARGV[0]);						# connect 
+$s->subscribe('rawtx');
+
+while (1) {
+
+	until ($s->has_pollin) {
+		usleep 100_000;
+	}
+
+	my @parts = $s->recv_multipart();			# read the broadcast message
+	my $rawtxn = unpack('H*', $parts[1]);			# convert to hex string
+	my $txn = `zcash-cli decoderawtransaction $rawtxn`;	# decode it
+
+	print Dumper $txn;					# dox it !
+}
+
